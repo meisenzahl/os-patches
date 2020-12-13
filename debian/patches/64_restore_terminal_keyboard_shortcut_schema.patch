@@ -1,0 +1,108 @@
+From: Ubuntu Desktop Team <ubuntu-desktop@lists.ubuntu.com>
+Date: Thu, 26 Jul 2018 16:19:06 +0100
+Subject: _restore_terminal_keyboard_shortcut_schema
+
+---
+ ...settings-daemon.plugins.media-keys.gschema.xml.in | 10 ++++++++++
+ plugins/media-keys/gsd-media-keys-manager.c          | 20 ++++++++++++++++++++
+ plugins/media-keys/media-keys.h                      |  1 +
+ plugins/media-keys/shortcuts-list.h                  |  1 +
+ 4 files changed, 32 insertions(+)
+
+Index: gnome-settings-daemon-3.35.91/data/org.gnome.settings-daemon.plugins.media-keys.gschema.xml.in
+===================================================================
+--- gnome-settings-daemon-3.35.91.orig/data/org.gnome.settings-daemon.plugins.media-keys.gschema.xml.in
++++ gnome-settings-daemon-3.35.91/data/org.gnome.settings-daemon.plugins.media-keys.gschema.xml.in
+@@ -131,6 +131,11 @@
+       <summary>Record a short video of the screen</summary>
+       <description>Binding to record a short video of the screen</description>
+     </key>
++    <key name="terminal" type="s">
++      <default>'&lt;Primary&gt;&lt;Alt&gt;t'</default>
++      <summary>Launch terminal</summary>
++      <description>Binding to launch the terminal.</description>
++    </key>
+     <key name="www" type="s">
+       <default>'XF86WWW'</default>
+       <summary>Launch web browser</summary>
+@@ -352,6 +357,11 @@
+       <summary>Record a short video of the screen</summary>
+       <description>Binding to record a short video of the screen</description>
+     </key>
++    <key name="terminal" type="as">
++      <default>['&lt;Primary&gt;&lt;Alt&gt;t']</default>
++      <summary>Launch terminal</summary>
++      <description>Binding to launch the terminal.</description>
++    </key>
+     <key name="www" type="as">
+       <default>['']</default>
+       <summary>Launch web browser</summary>
+Index: gnome-settings-daemon-3.35.91/plugins/media-keys/gsd-media-keys-manager.c
+===================================================================
+--- gnome-settings-daemon-3.35.91.orig/plugins/media-keys/gsd-media-keys-manager.c
++++ gnome-settings-daemon-3.35.91/plugins/media-keys/gsd-media-keys-manager.c
+@@ -1133,6 +1133,22 @@ gnome_session_shutdown_cb (GObject *sour
+ }
+ 
+ static void
++do_terminal_action (GsdMediaKeysManager *manager)
++{
++        GSettings *settings;
++        char *term;
++
++        settings = g_settings_new ("org.gnome.desktop.default-applications.terminal");
++        term = g_settings_get_string (settings, "exec");
++
++        if (term)
++        execute (manager, term, FALSE);
++
++        g_free (term);
++        g_object_unref (settings);
++}
++
++static void
+ gnome_session_shutdown (GsdMediaKeysManager *manager)
+ {
+ 	GsdMediaKeysManagerPrivate *priv = GSD_MEDIA_KEYS_MANAGER_GET_PRIVATE (manager);
+@@ -2687,6 +2703,9 @@ do_action (GsdMediaKeysManager *manager,
+         case SCREENCAST_KEY:
+                 do_screencast_action (manager);
+                 break;
++        case TERMINAL_KEY:
++                do_terminal_action (manager);
++                break;
+         case WWW_KEY:
+                 do_url_action (manager, "http", timestamp);
+                 break;
+@@ -3297,6 +3316,7 @@ migrate_keybinding_settings (void)
+                 { "window-screenshot-clip",     "window-screenshot-clip",       map_keybinding },
+                 { "area-screenshot-clip",       "area-screenshot-clip",         map_keybinding },
+                 { "screencast",                 "screencast",                   map_keybinding },
++                { "terminal",                   "terminal",                     map_keybinding },
+                 { "www",                        "www",                          map_keybinding },
+                 { "magnifier",                  "magnifier",                    map_keybinding },
+                 { "screenreader",               "screenreader",                 map_keybinding },
+Index: gnome-settings-daemon-3.35.91/plugins/media-keys/media-keys.h
+===================================================================
+--- gnome-settings-daemon-3.35.91.orig/plugins/media-keys/media-keys.h
++++ gnome-settings-daemon-3.35.91/plugins/media-keys/media-keys.h
+@@ -49,6 +49,7 @@ typedef enum {
+         WINDOW_SCREENSHOT_CLIP_KEY,
+         AREA_SCREENSHOT_CLIP_KEY,
+         SCREENCAST_KEY,
++        TERMINAL_KEY,
+         WWW_KEY,
+         PLAY_KEY,
+         PAUSE_KEY,
+Index: gnome-settings-daemon-3.35.91/plugins/media-keys/shortcuts-list.h
+===================================================================
+--- gnome-settings-daemon-3.35.91.orig/plugins/media-keys/shortcuts-list.h
++++ gnome-settings-daemon-3.35.91/plugins/media-keys/shortcuts-list.h
+@@ -71,6 +71,7 @@ static struct {
+         { WINDOW_SCREENSHOT_CLIP_KEY, "window-screenshot-clip", FALSE, SHELL_ACTION_MODE_NORMAL, META_KEY_BINDING_IGNORE_AUTOREPEAT },
+         { AREA_SCREENSHOT_CLIP_KEY, "area-screenshot-clip", FALSE, SHELL_ACTION_MODE_ALL, META_KEY_BINDING_IGNORE_AUTOREPEAT },
+         { SCREENCAST_KEY, "screencast", FALSE, NO_LOCK_MODE, META_KEY_BINDING_IGNORE_AUTOREPEAT },
++        { TERMINAL_KEY, "terminal", FALSE, GSD_ACTION_MODE_LAUNCHER, META_KEY_BINDING_IGNORE_AUTOREPEAT },
+         { WWW_KEY, "www", TRUE, GSD_ACTION_MODE_LAUNCHER, META_KEY_BINDING_IGNORE_AUTOREPEAT },
+         { PLAY_KEY, "play", TRUE, SHELL_ACTION_MODE_ALL, META_KEY_BINDING_IGNORE_AUTOREPEAT },
+         { PAUSE_KEY, "pause", TRUE, SHELL_ACTION_MODE_ALL, META_KEY_BINDING_IGNORE_AUTOREPEAT },
